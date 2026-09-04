@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Lavandería Industrial - Control de Insumos y Lotes</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="dark-mode">
+  <div class="app-container">
+    
+    <!-- HEADER -->
+    <header class="main-header">
+      <div class="brand">
+        <div class="brand-icon">🧺</div>
+        <div>
+          <h1>Lavandería Industrial</h1>
+          <p class="subtitle">Gestión de Inventario, Dosificación por Lote y Control Transaccional</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-success" onclick="handleExportarCSV()">📥 Exportar CSV</button>
+        <div class="server-badge online">
+          <span class="pulse-dot"></span> Sistema Online
+        </div>
+        <button id="theme-toggle-btn" class="btn-icon" title="Cambiar tema">🌙</button>
+      </div>
+    </header>
+
+    <!-- BANNER DE ALERTAS DE STOCK -->
+    <div id="alert-banner-container"></div>
+
+    <!-- MAIN DASHBOARD GRID -->
+    <main class="dashboard-grid">
+      
+      <!-- SECCIÓN DE STOCK DE INSUMOS -->
+      <section class="kpi-section">
+        <div class="card glass-card">
+          <div class="section-title-row">
+            <div>
+              <h2>📊 Stock de Insumos Químicos</h2>
+              <p class="section-subtitle">Gestión de existencias y parámetros de dosificación s.p.m.</p>
+            </div>
+            <div class="section-btn-group">
+              <button class="btn btn-primary btn-sm" onclick="openReabastecerModal()">📦 Reabastecer</button>
+              <button class="btn btn-secondary btn-sm" onclick="openMinimoModal()">⚙️ Ajustar Mínimos</button>
+            </div>
+          </div>
+
+          <!-- BARRA DE ESTADÍSTICAS RÁPIDAS Y FILTROS -->
+          <div class="stock-toolbar">
+            <div class="stock-stats-summary">
+              <span class="stat-pill"><strong id="stat-total-insumos">15</strong> Insumos</span>
+              <span class="stat-pill success"><strong id="stat-stock-optimo">15</strong> Óptimos</span>
+              <span class="stat-pill warning" id="pill-alertas-wrapper"><strong id="stat-alertas-count">0</strong> Alertas</span>
+            </div>
+
+            <div class="stock-search-box">
+              <input type="text" id="search-stock" class="search-input" placeholder="🔍 Buscar insumo..." oninput="handleStockFilter()">
+            </div>
+          </div>
+
+          <!-- PESTAÑAS DE CATEGORÍA DE INSUMO -->
+          <div class="category-tabs" id="stock-category-tabs">
+            <button class="tab-btn active" data-cat="all" onclick="filterStockCategory('all', event)">Todos (15)</button>
+            <button class="tab-btn" data-cat="pretratamiento" onclick="filterStockCategory('pretratamiento', event)">💧 Pretratamiento</button>
+            <button class="tab-btn" data-cat="enzimas" onclick="filterStockCategory('enzimas', event)">🌾 Enzimas</button>
+            <button class="tab-btn" data-cat="blanqueo" onclick="filterStockCategory('blanqueo', event)">✨ Blanqueo & Alcalinos</button>
+            <button class="tab-btn" data-cat="neutralizado" onclick="filterStockCategory('neutralizado', event)">⚗️ Neutralizado</button>
+            <button class="tab-btn" data-cat="alertas" onclick="filterStockCategory('alertas', event)">⚠️ Stock Bajo</button>
+          </div>
+
+          <div class="kpi-cards-grid" id="kpi-cards-container">
+            <div class="kpi-card loading"><div class="spinner"></div> Cargando inventario...</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SECCIÓN DE REGISTRO DE LOTE Y DOSIFICACIÓN -->
+      <section class="lote-section">
+        <div class="card glass-card">
+          <div class="card-header">
+            <h3>📝 Registrar Nuevo Lote</h3>
+            <span class="badge badge-info">Dosificación s.p.m.</span>
+          </div>
+
+          <form id="form-lote" onsubmit="handleRegistrarLote(event)">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="input-id-lote">ID de Lote</label>
+                <input type="text" id="input-id-lote" placeholder="ej: LOTE-101" required autocomplete="off">
+              </div>
+
+              <div class="form-group">
+                <label for="input-cliente">Cliente / Empresa</label>
+                <input type="text" id="input-cliente" placeholder="ej: Textiles Plaza" required autocomplete="off">
+              </div>
+
+              <div class="form-group full-width">
+                <label for="select-programa">Ruta / Ciclo de Lavado</label>
+                <select id="select-programa" required onchange="handleProgramaChange()">
+                  <option value="PROCESO_COMPLETO" selected>🔄 Proceso Completo Secuencial (5 Pasos)</option>
+                  <option value="PROCESO_STONE_COMPLETO">🌾 Ruta Stone Wash (Desengome ➡️ Stone ➡️ Neutralizado)</option>
+                  <option value="PROCESO_BLANQUEO_TOTAL">✨ Ruta Blanqueo Total (Desengome ➡️ Bleach ➡️ Neutralizado ➡️ Blanqueo)</option>
+                  <option value="STONE">🌾 Solo Paso Stone (Bio-stoning)</option>
+                  <option value="DESENGOME">💧 Solo Paso 1: Desengome</option>
+                  <option value="BLEACH">🧪 Solo Paso 3: Bleach (Clorado)</option>
+                  <option value="NEUTRALIZADO">⚗️ Solo Paso 4: Neutralizado</option>
+                  <option value="BLANQUEO">✨ Solo Paso 5: Blanqueo Óptico</option>
+                </select>
+              </div>
+
+              <div class="form-group" id="group-stone-variante">
+                <label for="select-stone-variante">Variante Enzimática</label>
+                <select id="select-stone-variante" onchange="calculateLiveDosage()">
+                  <option value="STONE_LIQUIDA" selected>Enzima Líquida </option>
+                  <option value="STONE_ENZIMA">Enzima Polvo</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="input-peso">Peso Total del Lote (kg)</label>
+                <input type="number" id="input-peso" step="0.1" min="0.1" placeholder="ej: 60" required oninput="calculateLiveDosage()">
+              </div>
+            </div>
+
+            <!-- PANEL DE DOSIFICACIÓN EN TIEMPO REAL CON LÍNEA DE TIEMPO -->
+            <div class="dosage-preview-box" id="dosage-preview-box">
+              <div class="dosage-header">
+                <span>⚡ Dosificación s.p.m. en Tiempo Real</span>
+                <span id="dosage-status-badge" class="badge badge-neutral">Ingrese peso</span>
+              </div>
+
+              <div class="washing-timeline" id="washing-timeline">
+                <!-- Pasos del proceso -->
+              </div>
+
+              <div class="dosage-grid" id="dosage-preview-container">
+                <div class="dosage-item">
+                  <span class="item-label">💧 Humectante (0.25%)</span>
+                  <span class="item-value">0 <small>g</small></span>
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" id="btn-submit-lote" class="btn btn-primary full-width">
+              <span>🚀 Registrar Lote y Descontar Insumos</span>
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- SECCIÓN DE HISTORIAL DE LOTES -->
+      <section class="historial-section full-width">
+        <div class="card glass-card">
+          <div class="historial-header-row">
+            <div>
+              <h3>📋 Historial de Lotes Procesados</h3>
+              <p class="section-subtitle">Consulte los consumos aplicados por lote o anule transacciones.</p>
+            </div>
+            
+            <div class="table-actions">
+              <input type="text" id="filter-cliente" class="search-input" placeholder="🔍 Buscar por cliente..." oninput="handleFilterHistorial()">
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Fecha / Hora</th>
+                  <th>ID Lote</th>
+                  <th>Cliente</th>
+                  <th>Ruta / Ciclo</th>
+                  <th>Peso</th>
+                  <th>🧪 Insumos Consumidos</th>
+                  <th>Estado</th>
+                  <th>Acción</th>
+                </tr>
+              </thead>
+              <tbody id="historial-tbody">
+                <!-- Filas renderizadas dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="main-footer">
+      <p>Sistema de Gestión de Lavandería Industrial &copy; 2026 | Transacciones ACID y Control de Insumos</p>
+    </footer>
+  </div>
+
+  <!-- MODAL DE REABASTECIMIENTO DE STOCK -->
+  <div id="modal-reabastecer" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>📦 Reabastecer Stock de Insumo</h3>
+        <button class="close-btn" onclick="closeReabastecerModal()">&times;</button>
+      </div>
+      <form onsubmit="handleReabastecer(event)">
+        <div class="form-group">
+          <label for="select-insumo-reabastecer">Seleccionar Insumo</label>
+          <select id="select-insumo-reabastecer" required>
+            <option value="humectante_g">Humectante (g)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="input-cant-reabastecer">Cantidad a Ingresar</label>
+          <input type="number" id="input-cant-reabastecer" step="0.1" min="0.1" placeholder="ej: 1000" required>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeReabastecerModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">➕ Sumar al Stock</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL DE UMBRALES DE STOCK MÍNIMO -->
+  <div id="modal-minimo" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>⚙️ Ajustar Stock Mínimo de Alerta</h3>
+        <button class="close-btn" onclick="closeMinimoModal()">&times;</button>
+      </div>
+      <form onsubmit="handleGuardarMinimos(event)">
+        <div class="form-group">
+          <label for="select-insumo-minimo">Seleccionar Insumo</label>
+          <select id="select-insumo-minimo" required onchange="handleSelectMinimoInsumoChange()">
+            <option value="humectante_g">Humectante (g)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="input-edit-minimo">Nuevo Stock Mínimo</label>
+          <input type="number" id="input-edit-minimo" step="0.1" min="0" required>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="closeMinimoModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">💾 Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATIONS CONTAINER -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
