@@ -19,6 +19,7 @@ Descripción:
 
 import csv
 import json
+import math
 import sqlite3
 import sys
 from datetime import datetime
@@ -249,7 +250,7 @@ def obtener_alertas_stock(db_path: Optional[Path] = None) -> List[dict]:
 
 
 def reabastecer_stock(insumo: str, cantidad_sumar: float, db_path: Optional[Path] = None) -> bool:
-    if cantidad_sumar <= 0:
+    if not insumo or not math.isfinite(cantidad_sumar) or cantidad_sumar <= 0:
         return False
     conn = get_connection(db_path)
     cursor = conn.cursor()

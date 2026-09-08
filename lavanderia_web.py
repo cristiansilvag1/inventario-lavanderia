@@ -6,6 +6,7 @@
 """
 
 import json
+import math
 import mimetypes
 import os
 import sys
@@ -178,17 +179,20 @@ class LavanderiaHTTPRequestHandler(BaseHTTPRequestHandler):
             return
 
         elif ruta == "/api/stock/reabastecer":
-            insumo = payload.get("insumo")
-            cantidad = float(payload.get("cantidad", 0))
+            insumo = payload.get("insumo", "")
+            try:
+                cantidad = float(payload.get("cantidad", 0))
+            except (TypeError, ValueError):
+                cantidad = 0
 
-            if not insumo or cantidad <= 0:
+            if not isinstance(insumo, str) or not insumo.strip() or not math.isfinite(cantidad) or cantidad <= 0:
                 self._responder_json({"exito": False, "mensaje": "Insumo y cantidad positiva requeridos."}, status=200)
                 return
 
-            exito = reabastecer_stock(insumo, cantidad)
+            exito = reabastecer_stock(insumo.strip(), cantidad)
             self._responder_json({
                 "exito": exito,
-                "mensaje": f"Se agregaron {cantidad} al insumo '{insumo}'." if exito else "No se pudo actualizar el stock."
+                "mensaje": f"Se agregaron {cantidad} al insumo '{insumo.strip()}'." if exito else "No se pudo actualizar el stock."
             }, status=200)
             return
 

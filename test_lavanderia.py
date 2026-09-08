@@ -130,6 +130,14 @@ class TestLavanderiaInventario(unittest.TestCase):
         self.assertIn(INSUMO_SUAVIZANTE, stock)
         self.assertEqual(len(stock), 15)
 
+    def test_reabastecer_stock(self):
+        stock_inicial = obtener_stock_dict(self.db_path)
+
+        self.assertTrue(reabastecer_stock(INSUMO_HUMECTANTE, 125.5, self.db_path))
+        self.assertEqual(obtener_stock_dict(self.db_path)[INSUMO_HUMECTANTE], stock_inicial[INSUMO_HUMECTANTE] + 125.5)
+        self.assertFalse(reabastecer_stock(INSUMO_HUMECTANTE, float("nan"), self.db_path))
+        self.assertFalse(reabastecer_stock("insumo_inexistente", 100, self.db_path))
+
     def test_procesar_lote_exito(self):
         exito, msg, faltantes = procesar_lote_transaccional("LOTE-101", "Textiles Plaza", 60.0, PROGRAMA_DESENGOME, self.db_path)
         self.assertTrue(exito)
